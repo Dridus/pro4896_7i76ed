@@ -1,0 +1,39 @@
+o<probe_z> sub
+  #<fast_speed>     = 4000
+  #<initial_speed>  =  500
+  #<slow_speed>     =  100
+  #<probe_drop>     =   50
+  #<plate_z_offset> =   25.3
+
+  o<safety_check> if [#<_hal[motion.probe-input]> NE 0]
+    (msg, probe already touching!)
+    o<probe_z> return
+  o<safety_check> endif
+
+  #<start_z> = [#<_z>]
+  
+  g21
+  g91
+  g92.1
+  g49
+
+  g38.3 f[#<initial_speed>] z[-#<probe_drop>]
+
+  o<fail_to_touch> if [#5070 EQ 0]
+    g90 g1 f[#<fast_speed>] z[#<start_z>]
+    (msg, probe never touched)
+    o<probe_z> return
+  o<fail_to_touch> endif 
+
+  g1 z1
+  g38.2 f[#<slow_speed>] z-2
+
+  g90
+
+  g1 f[#<fast_speed>] z[#<start_z>]
+
+  g10 l20 p0 z[[#<start_z>-#5063]+#<plate_z_offset>]
+
+o<probe_z> endsub
+m2
+

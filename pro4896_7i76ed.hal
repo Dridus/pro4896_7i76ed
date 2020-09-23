@@ -1,0 +1,135 @@
+loadrt [KINS]KINEMATICS
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JOINTS
+loadrt hostmot2
+loadrt hm2_eth config="sserial_port_0=22222222" board_ip=192.168.1.121
+loadrt estop_latch
+loadrt logic count=1 personality=0x203
+
+addf hm2_7i76e.0.read-request servo-thread
+addf hm2_7i76e.0.read         servo-thread
+addf logic.0                  servo-thread
+addf estop-latch.0            servo-thread
+addf motion-command-handler   servo-thread
+addf motion-controller        servo-thread
+addf hm2_7i76e.0.write        servo-thread
+
+################################################################################
+# Hardware input signals
+
+net  x-neg-lim   <= hm2_7i76e.0.7i76.0.0.input-06-not
+net y1-neg-lim   <= hm2_7i76e.0.7i76.0.0.input-01-not
+net y2-neg-lim   <= hm2_7i76e.0.7i76.0.0.input-00-not
+net  x-pos-lim   <= hm2_7i76e.0.7i76.0.0.input-08-not
+net y1-pos-lim   <= hm2_7i76e.0.7i76.0.0.input-07-not
+net  z-pos-lim   <= hm2_7i76e.0.7i76.0.0.input-02-not
+net estop-button <= hm2_7i76e.0.7i76.0.0.input-03
+net touch-probe  <= hm2_7i76e.0.7i76.0.0.input-05-not
+net aux          <= hm2_7i76e.0.7i76.0.0.input-04-not
+net spin-fault   <= hm2_7i76e.0.7i76.0.0.input-09
+
+################################################################################
+# E stop / faulting
+
+net estop-clear   iocontrol.0.user-request-enable => estop-latch.0.reset
+net estop-ok      estop-latch.0.ok-out => iocontrol.0.emc-enable-in
+net estop-trigger logic.0.or => estop-latch.0.fault-in
+net estop-button                                => logic.0.in-00
+net estop-watchdog hm2_7i76e.0.watchdog.has_bit => logic.0.in-01
+net spin-fault                                  => logic.0.in-02
+
+################################################################################
+# Tool change
+
+net tool-prep-loop iocontrol.0.tool-prepare => iocontrol.0.tool-prepared
+net tool-change-loop iocontrol.0.tool-change => iocontrol.0.tool-changed
+
+net touch-probe => motion.probe-input
+
+
+################################################################################
+# Joint 0 (X)
+
+setp hm2_7i76e.0.stepgen.00.steplen 3000
+setp hm2_7i76e.0.stepgen.00.stepspace 3000
+setp hm2_7i76e.0.stepgen.00.position-scale -80.204
+setp hm2_7i76e.0.stepgen.00.maxaccel 0
+setp hm2_7i76e.0.stepgen.00.dirsetup 5500
+setp hm2_7i76e.0.stepgen.00.dirhold 5500
+
+newsig x-enable bit
+sets   x-enable FALSE
+net    x-enable joint.0.amp-enable-out => hm2_7i76e.0.stepgen.00.enable
+net    x-pos-cmd joint.0.motor-pos-cmd => hm2_7i76e.0.stepgen.00.position-cmd
+net    x-pos-fb  joint.0.motor-pos-fb  <= hm2_7i76e.0.stepgen.00.position-fb
+net    x-neg-lim                       => joint.0.home-sw-in
+net    x-neg-lim                       => joint.0.neg-lim-sw-in
+net    x-pos-lim                       => joint.0.pos-lim-sw-in
+
+################################################################################
+# Joint 1 (Y)
+
+setp hm2_7i76e.0.stepgen.01.steplen 3010
+setp hm2_7i76e.0.stepgen.01.stepspace 3010
+setp hm2_7i76e.0.stepgen.01.position-scale 80.204
+setp hm2_7i76e.0.stepgen.01.maxaccel 0
+setp hm2_7i76e.0.stepgen.01.dirsetup 5500
+setp hm2_7i76e.0.stepgen.01.dirhold 5500
+
+newsig y1-enable  bit
+sets   y1-enable  FALSE
+net    y1-enable  joint.1.amp-enable-out => hm2_7i76e.0.stepgen.01.enable
+net    y1-pos-cmd joint.1.motor-pos-cmd  => hm2_7i76e.0.stepgen.01.position-cmd
+net    y1-pos-fb  joint.1.motor-pos-fb   <= hm2_7i76e.0.stepgen.01.position-fb
+net    y1-neg-lim                        => joint.1.home-sw-in
+net    y1-neg-lim                        => joint.1.neg-lim-sw-in
+net    y1-pos-lim                        => joint.1.pos-lim-sw-in
+
+################################################################################
+# Joint 2 (Z)
+
+setp hm2_7i76e.0.stepgen.02.steplen 3010
+setp hm2_7i76e.0.stepgen.02.stepspace 3010
+setp hm2_7i76e.0.stepgen.02.position-scale 200
+setp hm2_7i76e.0.stepgen.02.maxaccel 0
+setp hm2_7i76e.0.stepgen.02.dirsetup 5500
+setp hm2_7i76e.0.stepgen.02.dirhold 5500
+
+newsig z-enable  bit
+sets   z-enable  FALSE
+net    z-enable  joint.2.amp-enable-out => hm2_7i76e.0.stepgen.02.enable
+net    z-pos-cmd joint.2.motor-pos-cmd  => hm2_7i76e.0.stepgen.02.position-cmd
+net    z-pos-fb  joint.2.motor-pos-fb   <= hm2_7i76e.0.stepgen.02.position-fb
+net    z-pos-lim                        => joint.2.home-sw-in
+net    z-pos-lim                        => joint.2.pos-lim-sw-in
+
+################################################################################
+# Joint 3 (Y')
+
+setp hm2_7i76e.0.stepgen.03.steplen 3010
+setp hm2_7i76e.0.stepgen.03.stepspace 3010
+setp hm2_7i76e.0.stepgen.03.position-scale -80.204
+setp hm2_7i76e.0.stepgen.03.maxaccel 0
+setp hm2_7i76e.0.stepgen.03.dirsetup 5500
+setp hm2_7i76e.0.stepgen.03.dirhold 5500
+
+newsig y2-enable  bit
+sets   y2-enable  FALSE
+net    y2-enable  joint.3.amp-enable-out => hm2_7i76e.0.stepgen.03.enable
+net    y2-pos-cmd joint.3.motor-pos-cmd  => hm2_7i76e.0.stepgen.03.position-cmd
+net    y2-pos-fb  joint.3.motor-pos-fb   <= hm2_7i76e.0.stepgen.03.position-fb
+net    y2-neg-lim                        => joint.3.home-sw-in
+net    y2-neg-lim                        => joint.3.neg-lim-sw-in
+
+################################################################################
+# Spindle
+
+setp hm2_7i76e.0.7i76.0.0.spinout-scalemax 24000
+setp hm2_7i76e.0.7i76.0.0.spinout-minlim 8000
+setp hm2_7i76e.0.7i76.0.0.spinout-maxlim 24000
+
+# FIXME spindle fault
+net spindle-on    spindle.0.on            => hm2_7i76e.0.7i76.0.0.spinena
+net spindle-speed spindle.0.speed-out-abs => hm2_7i76e.0.7i76.0.0.spinout
+
+# start
+
