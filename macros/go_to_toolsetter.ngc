@@ -1,0 +1,20 @@
+o<go_to_toolsetter> sub
+
+#<save_metric> = #<_metric>
+#<save_absolute> = #<_absolute>
+#<save_feed> = #<_feed>
+#<save_coord_system> = #<_coord_system>
+
+g21 (mm)
+g90 (absolute mode)
+g92.1 (clear offsets)
+
+g53 g0 z0
+g53 g0 x[#<_ini[toolsetter]x>] y[#<_ini[toolsetter]y>]
+
+o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
+
+o<go_to_toolsetter> endsub
+
+m2
+

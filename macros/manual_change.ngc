@@ -1,0 +1,95 @@
+o<manual_change> sub
+
+o<check_change_required> if [#<_selected_tool> EQ #5200]
+  o<manual_change> return [1]
+o<check_change_required> endif
+
+#<save_metric> = #<_metric>
+#<save_absolute> = #<_absolute>
+#<save_feed> = #<_feed>
+#<save_coord_system> = #<_coord_system>
+
+( ************************ step 1: move the spindle to the tool change position )
+
+g21 (mm)
+g90 (absolute mode)
+g92.1 (clear offsets)
+g59.3 (go to wcs 9, which we hope is never used)
+
+g53 g0 z0 (safe spindle height)
+g53 g0 x[#<_ini[toolsetter]x>] y[#<_ini[toolsetter]y>] (go to toolsetter)
+
+( ************************ step 2: signal the UI that a tool change is requested and wait )
+
+m68 e[#<_ini[pins]requested_tool>] q[#<_selected_tool>] (inform the UI which tool is requested)
+m64 p[#<_ini[pins]request_tool_change>] (and signal the request)
+
+o<wait_for_tool_change> do
+  m66 p[#<_ini[pins]tool_changed>] l1 q120 (read the tool change feedback pin)
+o<wait_for_tool_change> while [#5399 EQ -1]
+
+m65 p[#<_ini[pins]request_tool_change>] (stop requesting a tool change)
+
+o<check_for_unload> if [#<_selected_tool> EQ 0]
+  (for an unload tool call, we're done)
+  o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
+  o<manual_change> return [1]
+o<check_for_unload> endif
+
+( ************************ step 3: probe the new tool offset )
+
+m68 e[#<_ini[pins]probe_select>] q[#<_ini[pins]probe_select_toolsetter>] (choose toolsetter probe)
+m66 e0 l0 (force a synch)
+o<safety_check> if [[#<_task> GT 0] and [#<_hal[motion.probe-input]> NE 0]]
+  (msg, probe already touching, cannot start a tool change!)
+  o<manual_change> return [-1] (indicate safety check failure to epilog)
+o<safety_check> endif
+
+g49 (disable TLO)
+g91 (incremental mode)
+
+f[#<_ini[toolsetter]fast_feed>] g38.2 z-[#<_ini[toolsetter]z_max_travel>] (probe down until we hit the toolsetter)
+#<z_fast_probe> = #5063 (save that position, g38.2 would have errored out if no touch)
+
+(dunno why this is required, but supposedly preview will break without it?)
+o<preview_check_fast> if [[#<_task> GT 0] and [#5070 EQ 0]]
+  o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
+  o<manual_change> return [-2] (indicate probe contact failure to epilog)
+o<preview_check_fast> endif
+
+g0 z[#<_ini[toolsetter]retract_z>]
+m66 e0 l0 (force a synch)
+o<retract_check> if [[#<_task> GT 0] and [#<_hal[motion.probe-input]> NE 0]]
+  (msg, probe still touching after retract!)
+  o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
+  o<manual_change> return [-1] (indicate safety check failure to epilog)
+o<retract_check> endif
+
+f[#<_ini[toolsetter]slow_feed>]
+g38.2 z-[#<_ini[toolsetter]retract_z> * 2]
+#<z_slow_probe> = #5063
+
+(dunno why this is required, but supposedly preview will break without it?)
+o<preview_check_slow> if [[#<_task> GT 0] and [#5070 EQ 0]]
+  o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
+  o<manual_change> return [-2] (indicate probe contact failure to epilog)
+o<preview_check_slow> endif
+
+g90 (absolute mode)
+g53 g0 z0 (safe spindle height)
+
+( ************************ step 4: set the new TLO and tool # )
+
+m66 e0 l0 (force a synch)
+
+#<new_tlo> = [abs[#<_ini[toolsetter]spindle_zero_height> + #<z_slow_probe>]]
+
+g10 l1 p[#<_selected_tool>] z[#<new_tlo>]
+
+o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
+
+m61 q[#<_selected_tool>] g43 h[#<_selected_tool>] (apply TLO)
+
+o<manual_change> endsub [1]
+
+m2

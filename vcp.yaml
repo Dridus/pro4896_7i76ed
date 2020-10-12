@@ -1,0 +1,15 @@
+windows:
+  mainwindow:
+    kwargs:
+      confirm_exit: true
+
+data_plugins:
+  persistent_data_manager:
+    kwargs:
+      serialization_method: json
+      persistence_file: var/vcp_data.json
+
+  tooltable:
+    provider: qtpyvcp.plugins.tool_table:ToolTable
+    kwargs:
+        columns: TPXYZDR

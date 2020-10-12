@@ -1,0 +1,4 @@
+source vc-p2s-postgui.hal
+source timer.hal
+source toolchange-ui.hal
+

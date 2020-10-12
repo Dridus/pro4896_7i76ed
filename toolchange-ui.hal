@@ -1,0 +1,19 @@
+loadrt timedelay count=1
+addf timedelay.0 servo-thread
+
+net tool-change-request <= motion.digital-out-[PINS]REQUEST_TOOL_CHANGE
+net tool-change-request => qtpyvcp.tool-change-requested.flash
+net tool-change-request => qtpyvcp.requested-tool.enable
+net tool-change-request => qtpyvcp.requested-tool-changed.enable
+
+# enable the LED with the tool change request, but disable it shortly after stopping it flashing so it doesn't get stuck on
+setp timedelay.0.on-delay 0
+setp timedelay.0.off-delay 0.1
+net tool-change-request => timedelay.0.in
+net tool-change-request-delay <= timedelay.0.out
+net tool-change-request-delay => qtpyvcp.tool-change-requested.on
+
+net tool-change-requested-tool <= motion.analog-out-[PINS]REQUESTED_TOOL
+net tool-change-requested-tool => qtpyvcp.requested-tool.in
+net tool-change-requested-tool-changed <= qtpyvcp.requested-tool-changed.out
+net tool-change-requested-tool-changed => motion.digital-in-[PINS]TOOL_CHANGED

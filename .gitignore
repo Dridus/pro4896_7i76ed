@@ -1,2 +1,6 @@
 *.halsave
 *.bak
+*.pyc
+*.pickle
+/log/
+/var/

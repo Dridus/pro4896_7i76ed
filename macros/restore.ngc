@@ -1,0 +1,47 @@
+o<restore> sub
+
+o<change_units> if [#1 NE #<_metric>]
+  o<g21_or_g20> if [#1]
+    g21
+  o<g21_or_g20> else
+    g20
+  o<g21_or_g20> endif
+o<change_units> endif
+
+o<change_abs> if [#2 NE #<_absolute>]
+  o<g90_or_g91> if [#2]
+    g90
+  o<g90_or_g91> else
+    g91
+  o<g90_or_g91> endif
+o<change_abs> endif
+
+o<change_feed> if [#3 NE #<_feed>]
+  f[#3]
+o<change_feed> endif
+
+o<change_wcs> if [#4 NE #<_coord_system>]
+  o<g54_etc> if [#4 EQ 540]
+    g54
+  o<g54_etc> else if [#4 EQ 550]
+    g55
+  o<g54_etc> else if [#4 EQ 560]
+    g56
+  o<g54_etc> else if [#4 EQ 570]
+    g57
+  o<g54_etc> else if [#4 EQ 580]
+    g58
+  o<g54_etc> else if [#4 EQ 590]
+    g59
+  o<g54_etc> else if [#4 EQ 591]
+    g59.1
+  o<g54_etc> else if [#4 EQ 592]
+    g59.2
+  o<g54_etc> else if [#4 EQ 593]
+    g59.3
+  o<g54_etc> endif
+o<change_wcs> endif
+
+o<restore> endsub
+
+m2

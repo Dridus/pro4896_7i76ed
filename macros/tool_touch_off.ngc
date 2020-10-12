@@ -1,0 +1,62 @@
+o<tool_touch_off> sub
+
+#<load_spindle_tool_number_2> = #1
+
+#<save_metric> = #<_metric>
+#<save_absolute> = #<_absolute>
+#<save_feed> = #<_feed>
+#<save_coord_system> = #<_coord_system>
+
+g59.3 (go to wcs 9, which we hope is never used)
+
+g21 (mm)
+g90 (absolute mode)
+g92.1 (clear offsets)
+
+g53 g0 z0 (safe spindle height)
+g53 g0 x[#<_ini[toolsetter]x>] y[#<_ini[toolsetter]y>] (go to toolsetter)
+
+m68 e[#<_ini[pins]probe_select>] q[#<_ini[pins]probe_select_toolsetter>] (choose toolsetter probe)
+m66 e0 l0 (force a synch)
+o<safety_check> if [#<_hal[motion.probe-input]> NE 0]
+  (msg, probe already touching!)
+  o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
+  o<tool_touch_off> return
+o<safety_check> endif
+
+g49 (disable TLO)
+g91 (incremental mode)
+
+f[#<_ini[toolsetter]fast_feed>] g38.2 z-[#<_ini[toolsetter]z_max_travel>] (probe down until we hit the toolsetter)
+#<z_fast_probe> = #5063 (save that position, g38.2 would have errored out if no touch)
+g0 z[#<_ini[toolsetter]retract_z>]
+
+m66 e0 l0 (force a synch)
+o<retract_check> if [#<_hal[motion.probe-input]> NE 0]
+  (msg, probe still touching after retract!)
+  o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
+  o<tool_touch_off> return
+o<retract_check> endif
+
+f[#<_ini[toolsetter]slow_feed>]
+g38.2 z-[#<_ini[toolsetter]retract_z> * 2]
+#<z_slow_probe> = #5063
+
+g90 (absolute mode)
+g53 g0 z0 (safe spindle height)
+
+m66 e0 l0 (force a synch)
+
+#<new_tlo> = [abs[#<_ini[toolsetter]spindle_zero_height> + #<z_slow_probe>]]
+
+(debug, probed fast at #<z_fast_probe>, slow at #<z_slow_probe>, new TLO = #<new_tlo>)
+
+g10 l1 p[#<load_spindle_tool_number_2>] z[#<new_tlo>]
+
+o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
+
+m61 q[#<load_spindle_tool_number_2>] g43 h[#<load_spindle_tool_number_2>] (apply TLO)
+
+o<tool_touch_off> endsub
+
+m2
