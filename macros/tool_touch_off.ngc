@@ -49,8 +49,6 @@ m66 e0 l0 (force a synch)
 
 #<new_tlo> = [abs[#<_ini[toolsetter]spindle_zero_height> + #<z_slow_probe>]]
 
-(debug, probed fast at #<z_fast_probe>, slow at #<z_slow_probe>, new TLO = #<new_tlo>)
-
 g10 l1 p[#<load_spindle_tool_number_2>] z[#<new_tlo>]
 
 o<restore> call [#<save_metric>] [#<save_absolute>] [#<save_feed>] [#<save_coord_system>]
